@@ -29,13 +29,29 @@ public class MessageReceiver extends SwingWorker<Integer, String> {
 	@Override
 	protected Integer doInBackground() throws Exception {
 		ZMQ.Socket subscribe = context.socket(ZMQ.SUB);
-		subscribe.connect("tcp://192.168.1.1:5556");
-		subscribe.subscribe("".getBytes());
+		String portList[] = {"5560","5561","5562","5563","5564","5565"};
+		int maxIp = 20;
+		for (String port : portList)
+		{
+			subscribe.connect("tcp://localhost:"+port);
+			for (int ip = 0; ip < maxIp; ip++)
+			{
+				subscribe.connect("tcp://192.168.1."+ip+":"+port);
+			}
+				
+		}
+		
+		
+		
+		
+		subscribe.subscribe("MediaInfo".getBytes());
+		subscribe.subscribe("TimeValue".getBytes());
         
 		while (true){	
-			String msg = new String(subscribe.recv());
-			System.out.println("Pulling message: " + msg);
-			publish(msg);
+			String header = new String(subscribe.recv());
+			String msg    = new String(subscribe.recv());
+			System.out.println("Pulling message: " + header+" "+msg);
+			publish(header+" "+msg);
 		}
 
 	}
@@ -50,13 +66,21 @@ public class MessageReceiver extends SwingWorker<Integer, String> {
 
 	private void routeRequest(String request){
 		
-		char header = request.charAt(0);
-		String payload = request.substring(1);
+		String header  = request.split(" ",2)[0];
+		String payload = request.split(" ",2)[1];
+		System.out.println("Header received: "+header);
 		
-		switch (header){
-		case ('1'):
+		if (header.equalsIgnoreCase("MediaInfo")){		
 			handleMediaUpdate(payload);
-			break;
+		}
+		else if (header.equalsIgnoreCase("TimeValue")){
+			handleTimeUpdate(payload);
+		}
+		else{
+			System.out.println("Unrecognised header - disgarding message.");
+		}
+		
+		/*
 		case ('2'):
 			handleLightsUpdate(payload);
 			break;
@@ -64,7 +88,7 @@ public class MessageReceiver extends SwingWorker<Integer, String> {
 			handlePlayingUpdate(payload);
 			break;
 		case ('4'):
-			handleTimeUpdate(payload);
+			
 			break;
 		case ('5'):
 			handleTempUpdate(payload);
@@ -72,8 +96,9 @@ public class MessageReceiver extends SwingWorker<Integer, String> {
 		case ('6'):
 			handleWeatherUpdate(payload);
 		default:
-			System.out.println("Unrecognised header - disgarding message.");
+			
 		}
+		*/
 	}
 	
 	private void handleMediaUpdate(String payload){
